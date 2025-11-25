@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>我和她的回憶</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&family=Pacifico&display=swap" rel="stylesheet">
+    
+    <style>
+        body { font-family: 'Noto Serif TC', serif; }
+        .font-handwriting { font-family: 'Pacifico', cursive; }
+        @keyframes floatUp {
+            0% { transform: translateY(0) scale(1); opacity: 1; }
+            100% { transform: translateY(-100vh) scale(1.5); opacity: 0; }
+        }
+        .floating-heart { position: fixed; color: #ff6b81; animation: floatUp 4s ease-in forwards; z-index: 50; pointer-events: none; }
+        .fade { animation-name: fade; animation-duration: 1.5s; }
+        @keyframes fade { from {opacity: .4} to {opacity: 1} }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #ffe4e6; }
+        ::-webkit-scrollbar-thumb { background: #fb7185; border-radius: 5px; }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        .shake { animation: shake 0.3s ease-in-out; }
+        
+        .message-card:hover { transform: translateY(-5px); }
+        
+        .filter-btn.active {
+            background-color: #ec4899; 
+            color: white;
+        }
+        
+        .game-photo-container {
+            overflow: hidden;
+            position: relative; 
+        }
+        .game-photo-container > img.cover-img {
+            transition: transform 0.5s ease;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        @media (min-width: 768px) {
+            .game-photo-container:hover > img.cover-img {
+                transform: scale(1.1);
+            }
+        }
+
+        .photo-count-badge {
+            position: absolute;
+            bottom: 8px;
+            right: 8px;
+            background-color: rgba(0, 0, 0, 0.6);
+            color: white;
+            font-size: 0.75rem;
+            padding: 4px 8px;
+            border-radius: 999px;
+            backdrop-filter: blur(2px);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            pointer-events: none; 
+        }
+        
+        #lightbox {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.95);
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
+        #lightbox-img {
+            max-width: 95%;
+            max-height: 70vh;
+            border-radius: 8px;
+            box-shadow: 0 0 20px rgba(255,255,255,0.2);
+            transition: opacity 0.3s ease;
+        }
+        
+        .lb-nav {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            color: white;
+            font-size: 2rem;
+            padding: 15px;
+            cursor: pointer;
+            transition: 0.3s;
+            background: rgba(255,255,255,0.1);
+            border-radius: 50%;
+            user-select: none;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2001;
+        }
+        .lb-nav:active { background: rgba(236, 72, 153, 0.8); }
+        .lb-prev { left: 10px; }
+        .lb-next { right: 10px; }
+        
+        #lb-counter {
+            color: #ddd;
+            margin-top: 15px;
+            font-family: monospace;
+            font-size: 1rem;
+        }
+
+        .tag-item {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            margin: 0.25rem;
+            transition: transform 0.2s;
+        }
+        .tag-item:hover { transform: scale(1.05); }
+
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        .record-spin { animation: spin 3s linear infinite; }
+        
+        /* 提示氣泡跳動動畫 */
+        @keyframes bounce-hint {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+        .hint-bounce {
+            animation: bounce-hint 1.5s infinite;
+        }
+
+        #mobile-menu {
+            transition: max-height 0.3s ease-in-out, opacity 0.3s ease-in-out;
+            max-height: 0;
+            opacity: 0;
+            overflow: hidden;
+        }
+        #mobile-menu.open {
+            max-height: 400px;
+            opacity: 1;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-pink-50 via-white to-pink-100 text-gray-700 min-h-screen overflow-x-hidden selection:bg-pink-200 selection:text-pink-800">
+
+    <!-- 密碼鎖定視窗 -->
+    <div id="passwordModal" class="fixed inset-0 z-[3000] bg-pink-50 flex flex-col items-center justify-center transition-opacity duration-500">
+        <div class="bg-white p-8 rounded-3xl shadow-2xl text-center max-w-sm w-[85%] border-4 border-pink-100">
+            <div class="text-5xl text-pink-400 mb-4 animate-bounce"><i class="fas fa-lock"></i></div>
+            <h2 class="text-xl md:text-2xl font-bold text-pink-600 mb-2">專屬秘密空間</h2>
+            <p class="text-gray-500 mb-6 text-sm">請輸入通關密碼開啟回憶</p>
+            <input type="password" id="_input_p" class="w-full px-4 py-3 rounded-xl border-2 border-pink-200 focus:border-pink-500 focus:outline-none mb-4 text-center text-lg tracking-widest text-pink-600 placeholder-pink-200 bg-white" placeholder="Password">
+            <button id="_btn_enter" class="w-full bg-gradient-to-r from-pink-400 to-red-400 text-white font-bold py-3 rounded-xl transition shadow-lg transform active:scale-95 hover:shadow-pink-300/50">開啟驚喜</button>
+            <p id="_msg_err" class="text-red-400 text-sm mt-4 hidden font-bold"><i class="fas fa-times-circle mr-1"></i> 密碼錯誤</p>
+        </div>
+        <p class="mt-8 text-pink-300 text-xs">Made for Love</p>
+    </div>
+
+    <!-- 導航列 -->
+    <nav class="fixed top-0 w-full bg-white/90 backdrop-blur-md shadow-sm z-50">
+        <div class="max-w-6xl mx-auto px-4 py-3">
+            <div class="flex justify-between items-center">
+                <div class="text-xl md:text-2xl font-bold text-pink-500 tracking-widest flex items-center">
+                    <i class="fas fa-heart mr-2 animate-pulse"></i>LoveStory
+                </div>
+                
+                <div class="hidden md:flex space-x-6 text-base font-medium text-pink-400">
+                    <a href="#home" class="hover:text-pink-600 transition">首頁</a>
+                    <a href="#timeline" class="hover:text-pink-600 transition">心動瞬間</a>
+                    <a href="#games" class="hover:text-pink-600 transition">遊戲時光</a>
+                    <a href="#gallery" class="hover:text-pink-600 transition">相冊</a>
+                    <a href="#favorites" class="hover:text-pink-600 transition">關於妳</a>
+                    <a href="#message-board" class="hover:text-pink-600 transition">留言板</a>
+                </div>
+
+                <button id="mobile-menu-btn" class="md:hidden text-pink-400 text-2xl focus:outline-none p-2">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+
+            <div id="mobile-menu" class="md:hidden bg-white border-t border-pink-50 mt-2 rounded-b-xl shadow-lg">
+                <div class="flex flex-col space-y-2 p-4 text-center text-pink-500 font-medium">
+                    <a href="#home" class="py-2 hover:bg-pink-50 rounded-lg" onclick="toggleMobileMenu()">首頁</a>
+                    <a href="#timeline" class="py-2 hover:bg-pink-50 rounded-lg" onclick="toggleMobileMenu()">心動瞬間</a>
+                    <a href="#games" class="py-2 hover:bg-pink-50 rounded-lg" onclick="toggleMobileMenu()">遊戲時光</a>
+                    <a href="#gallery" class="py-2 hover:bg-pink-50 rounded-lg" onclick="toggleMobileMenu()">相冊</a>
+                    <a href="#favorites" class="py-2 hover:bg-pink-50 rounded-lg" onclick="toggleMobileMenu()">關於妳</a>
+                    <a href="#message-board" class="py-2 hover:bg-pink-50 rounded-lg" onclick="toggleMobileMenu()">留言板</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero & Timer -->
+    <section id="home" class="pt-28 pb-16 px-4 text-center relative">
+        <div class="max-w-4xl mx-auto">
+            <h1 class="text-3xl md:text-6xl font-bold text-pink-600 mb-4 drop-shadow-sm">我和她的回憶</h1>
+            <p class="text-base md:text-xl text-gray-500 mb-8 italic px-4">"遇見妳，我很幸運"</p>
+            
+            <div class="bg-white p-6 md:p-8 rounded-3xl shadow-xl border border-pink-100 w-full max-w-sm md:max-w-none mx-auto inline-block relative z-10">
+                <h3 class="text-pink-400 uppercase tracking-widest text-xs md:text-sm mb-2 font-bold">2024.04.21 - 2025.01.19</h3>
+                
+                <div id="timer" class="grid grid-cols-3 gap-2 md:gap-8 text-pink-600 mb-6">
+                    <div><span id="days" class="text-2xl md:text-5xl font-bold block">0</span><span class="text-[10px] md:text-xs text-gray-400">DAYS</span></div>
+                    <div class="border-l border-pink-100 pl-2 md:pl-4"><span id="hours" class="text-2xl md:text-5xl font-bold block">0</span><span class="text-[10px] md:text-xs text-gray-400">HOURS</span></div>
+                    <div class="border-l border-pink-100 pl-2 md:pl-4"><span id="minutes" class="text-2xl md:text-5xl font-bold block">0</span><span class="text-[10px] md:text-xs text-gray-400">MINS</span></div>
+                </div>
+
+                <!-- MP3 音樂播放器 -->
+                <div class="flex justify-center items-center gap-2 border-t border-pink-100 pt-6 relative">
+                    
+                    <!-- 提示氣泡 -->
+                    <div class="absolute -top-2 left-1/2 -translate-x-1/2 z-20 hint-bounce pointer-events-none">
+                        <div class="bg-pink-500 text-white text-[10px] font-bold px-3 py-1 rounded-full shadow-md relative">
+                            按我聽歌! 🎵
+                            <div class="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-pink-500"></div>
+                        </div>
+                    </div>
+
+                    <button id="musicToggleBtn" class="group flex items-center gap-2 md:gap-3 bg-pink-50 hover:bg-pink-100 px-4 py-2 rounded-full transition-all duration-300 focus:outline-none flex-grow md:flex-grow-0 md:w-64 border border-pink-100 shadow-sm relative z-10">
+                        <div class="relative flex-shrink-0">
+                            <i id="recordIcon" class="fas fa-compact-disc text-2xl md:text-3xl text-pink-500 transition-transform duration-700"></i>
+                            <div class="absolute inset-0 flex items-center justify-center">
+                                <div class="w-1.5 h-1.5 bg-white rounded-full"></div>
+                            </div>
+                        </div>
+                        <div class="text-left overflow-hidden">
+                            <span id="musicStatus" class="text-[10px] text-gray-400 block font-bold uppercase">Click to Play</span>
+                            <span id="musicTitle" class="text-pink-500 font-bold text-xs md:text-sm truncate block w-full">Loading...</span>
+                        </div>
+                    </button>
+                    
+                    <button id="nextTrackBtn" class="bg-pink-400 hover:bg-pink-500 text-white rounded-full w-10 h-10 flex items-center justify-center transition shadow-md active:scale-95 relative z-10">
+                        <i class="fas fa-step-forward"></i>
+                    </button>
+
+                    <audio id="bgMusic" preload="auto"></audio>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 心動瞬間 -->
+    <section id="timeline" class="py-12 px-4 bg-white/50">
+        <div class="max-w-5xl mx-auto">
+            <div class="text-center mb-12">
+                <h2 class="text-2xl md:text-3xl font-bold text-pink-600 mb-2">心動瞬間</h2>
+                <p class="text-gray-500 text-sm md:text-base">這些是我們最喜歡的合照與回憶</p>
+                <div class="w-12 md:w-16 h-1 bg-pink-400 mx-auto rounded-full mt-2"></div>
+            </div>
+
+            <div class="flex flex-col md:flex-row items-center gap-6 md:gap-8 mb-16 group">
+                <div class="w-full md:w-1/2 relative px-2">
+                    <div class="absolute inset-0 bg-pink-200 rounded-3xl transform rotate-3 transition group-hover:rotate-6"></div>
+                    <img src="im/Screenshot_20240414_152624_Free Fire.jpg" 
+                         class="relative rounded-3xl shadow-xl w-full h-64 md:h-80 object-cover cursor-pointer" 
+                         onclick="showSinglePhoto(this.src)" alt="最愛合照1">
+                </div>
+                <div class="w-full md:w-1/2 text-center md:text-left px-2">
+                    <span class="text-pink-400 font-bold tracking-widest text-xs uppercase">Top 1 Favorite</span>
+                    <h3 class="text-2xl font-bold text-gray-800 mt-2 mb-3">2024/04/14</h3>
+                    <p class="text-gray-600 leading-relaxed text-sm md:text-lg">還記得妳不小心刪掉照片，我把我拍照片的都給妳，妳說妳最喜歡的一張😍</p>
+                </div>
+            </div>
+
+            <div class="flex flex-col md:flex-row-reverse items-center gap-6 md:gap-8 mb-16 group">
+                <div class="w-full md:w-1/2 relative px-2">
+                    <div class="absolute inset-0 bg-blue-100 rounded-3xl transform -rotate-3 transition group-hover:-rotate-6"></div>
+                    <img src="im/Screenshot_20240401_233655_Free Fire.jpg" 
+                         class="relative rounded-3xl shadow-xl w-full h-64 md:h-80 object-cover cursor-pointer" 
+                         onclick="showSinglePhoto(this.src)" alt="最愛合照2">
+                </div>
+                <div class="w-full md:w-1/2 text-center md:text-left md:pl-8 px-2">
+                    <span class="text-blue-400 font-bold tracking-widest text-xs uppercase">Unforgettable</span>
+                    <h3 class="text-2xl font-bold text-gray-800 mt-2 mb-3">2024/04/01</h3>
+                    <p class="text-gray-600 leading-relaxed text-sm md:text-lg">第一次比愛心給我，當時真的很開心也很意外😊</p>
+                </div>
+            </div>
+
+            <div class="flex flex-col md:flex-row items-center gap-6 md:gap-8 group">
+                <div class="w-full md:w-1/2 relative px-2">
+                    <div class="absolute inset-0 bg-yellow-100 rounded-3xl transform rotate-3 transition group-hover:rotate-6"></div>
+                    <img src="ot/Screenshot_20240318_201512_Free Fire.jpg 的副本.jpg" 
+                         class="relative rounded-3xl shadow-xl w-full h-64 md:h-80 object-cover cursor-pointer" 
+                         onclick="showSinglePhoto(this.src)" alt="最愛合照3">
+                </div>
+                <div class="w-full md:w-1/2 text-center md:text-left px-2">
+                    <span class="text-yellow-500 font-bold tracking-widest text-xs uppercase">Sweet Moment</span>
+                    <h3 class="text-2xl font-bold text-gray-800 mt-2 mb-3">2024/03/18</h3>
+                    <p class="text-gray-600 leading-relaxed text-sm md:text-lg">妳第一次跟我一起搭車，每次妳都寧願毒死都不給我載😠</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 遊戲時光長廊 (自動生成版) -->
+    <section id="games" class="py-12 bg-pink-50">
+        <div class="max-w-6xl mx-auto px-4">
+            <div class="text-center mb-8">
+                <h2 class="text-2xl md:text-3xl font-bold text-pink-600 mb-2"><i class="fas fa-gamepad mr-2"></i>遊戲時光</h2>
+                <p class="text-gray-500 text-sm">那些一起玩遊戲搞笑相戀的日子</p>
+                <div class="w-12 md:w-16 h-1 bg-pink-400 mx-auto rounded-full mt-2"></div>
+            </div>
+
+            <div class="flex flex-col md:flex-row justify-center items-center gap-4 mb-8">
+                <div class="flex flex-wrap justify-center gap-2 md:gap-4">
+                    <!-- 按鈕區域 [修正] 增加 'all' 按鈕，修改 'mb' 按鈕邏輯 -->
+                    <button onclick="filterGames('all')" class="filter-btn active px-4 py-1.5 text-sm md:px-6 md:py-2 md:text-base rounded-full border border-pink-300 text-pink-500 hover:bg-pink-500 hover:text-white transition">全部</button>
+                    <button onclick="filterGames('im')" class="filter-btn px-4 py-1.5 text-sm md:px-6 md:py-2 md:text-base rounded-full border border-pink-300 text-pink-500 hover:bg-pink-500 hover:text-white transition">重要❗</button>
+                    <button onclick="filterGames('bh')" class="filter-btn px-4 py-1.5 text-sm md:px-6 md:py-2 md:text-base rounded-full border border-pink-300 text-pink-500 hover:bg-pink-500 hover:text-white transition">大心心❤️</button>
+                    <button onclick="filterGames('sm')" class="filter-btn px-4 py-1.5 text-sm md:px-6 md:py-2 md:text-base rounded-full border border-pink-300 text-pink-500 hover:bg-pink-500 hover:text-white transition">小心心🫶</button>
+                    <button onclick="filterGames('mb')" class="filter-btn px-4 py-1.5 text-sm md:px-6 md:py-2 md:text-base rounded-full border border-pink-300 text-pink-500 hover:bg-pink-500 hover:text-white transition">銘哥 🎮</button>
+                    <button onclick="filterGames('ot')" class="filter-btn px-4 py-1.5 text-sm md:px-6 md:py-2 md:text-base rounded-full border border-pink-300 text-pink-500 hover:bg-pink-500 hover:text-white transition">其他</button>
+                </div>
+
+                <div class="flex items-center gap-2 bg-white p-1 rounded-full border border-pink-200 shadow-sm">
+                    <input type="date" id="gameDateSearch" class="pl-4 pr-2 py-1 text-sm text-gray-600 outline-none bg-transparent rounded-full focus:ring-0">
+                    <button onclick="searchGamesByDate()" class="bg-pink-400 hover:bg-pink-500 text-white rounded-full w-8 h-8 flex items-center justify-center transition flex-shrink-0"><i class="fas fa-search text-xs"></i></button>
+                </div>
+            </div>
+
+            <!-- 自動生成的照片牆 -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-6" id="game-grid">
+            </div>
+        </div>
+    </section>
+
+    <!-- 輪播相冊 -->
+    <section id="gallery" class="py-12 bg-white">
+        <div class="max-w-5xl mx-auto px-4">
+            <div class="text-center mb-8">
+                <h2 class="text-2xl md:text-3xl font-bold text-pink-600 mb-2">更多回憶</h2>
+                <div class="w-12 md:w-16 h-1 bg-pink-400 mx-auto rounded-full"></div>
+            </div>
+            <div class="relative max-w-4xl mx-auto shadow-2xl rounded-2xl overflow-hidden group">
+                <div class="mySlides fade hidden">
+                    <div class="relative h-56 md:h-96">
+                        <img src="im/Picsart_24-06-30_16-31-12-082.jpg" class="w-full h-full object-cover">
+                        <div class="absolute bottom-0 w-full bg-gradient-to-t from-pink-900/70 to-transparent p-4 md:p-6 text-white text-center">
+                            <h3 class="text-lg md:text-xl font-bold">第一次做的禮物!</h3>
+                            <p class="text-xs md:text-sm opacity-90">當時可是花了好久呢，還好妳喜歡😁</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="mySlides fade hidden">
+                    <div class="relative h-56 md:h-96">
+                        <img src="im/Screenshot_20240701_170105_Free Fire.jpg" class="w-full h-full object-cover">
+                        <div class="absolute bottom-0 w-full bg-gradient-to-t from-pink-900/70 to-transparent p-4 md:p-6 text-white text-center">
+                            <h3 class="text-lg md:text-xl font-bold">王牌搭檔</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="mySlides fade hidden">
+                    <div class="relative h-56 md:h-96">
+                        <img src="im/Screenshot_20240415_191704_Free Fire.jpg" class="w-full h-full object-cover">
+                        <div class="absolute bottom-0 w-full bg-gradient-to-t from-pink-900/70 to-transparent p-4 md:p-6 text-white text-center">
+                            <h3 class="text-lg md:text-xl font-bold">第一次跟妳拍影片</h3>
+                            <p class="text-xs md:text-sm opacity-90">謝謝妳一直以來的包容與愛護。</p>
+                        </div>
+                    </div>
+                </div>
+                <a class="absolute top-1/2 left-2 md:left-4 -translate-y-1/2 text-white text-xl md:text-2xl font-bold hover:bg-pink-500/50 w-8 h-8 md:w-10 md:h-10 flex items-center justify-center rounded-full cursor-pointer transition" onclick="plusSlides(-1)"><i class="fas fa-chevron-left"></i></a>
+                <a class="absolute top-1/2 right-2 md:right-4 -translate-y-1/2 text-white text-xl md:text-2xl font-bold hover:bg-pink-500/50 w-8 h-8 md:w-10 md:h-10 flex items-center justify-center rounded-full cursor-pointer transition" onclick="plusSlides(1)"><i class="fas fa-chevron-right"></i></a>
+            </div>
+        </div>
+    </section>
+
+    <!-- 關於妳的小秘密 -->
+    <section id="favorites" class="py-12 px-4 bg-pink-50">
+        <div class="max-w-6xl mx-auto">
+            <div class="text-center mb-10">
+                <h2 class="text-2xl md:text-3xl font-bold text-pink-600 mb-2">關於妳的小秘密</h2>
+                <p class="text-gray-500 text-sm">把妳的喜好都記在心裡，就不怕踩雷啦！</p>
+                <div class="w-12 md:w-16 h-1 bg-pink-400 mx-auto rounded-full mt-2"></div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="bg-white p-6 rounded-3xl shadow-lg border-t-8 border-pink-400">
+                    <div class="text-center mb-4">
+                        <div class="w-12 h-12 md:w-16 md:h-16 bg-pink-100 rounded-full flex items-center justify-center mx-auto text-pink-500 text-xl md:text-2xl mb-2"><i class="fas fa-utensils"></i></div>
+                        <h3 class="text-lg md:text-xl font-bold text-gray-800">😋 妳愛吃的美食</h3>
+                    </div>
+                    <div class="text-center flex flex-wrap justify-center gap-1">
+                        <span class="tag-item bg-pink-100 text-pink-600">火鍋 🥘</span>
+                        <span class="tag-item bg-pink-100 text-pink-600">烏龍麵 🍜</span>
+                        <span class="tag-item bg-pink-100 text-pink-600">麥當勞 🍔</span>
+                        <span class="tag-item bg-pink-100 text-pink-600">草莓 🍓</span>
+                        <span class="tag-item bg-pink-100 text-pink-600">滿天星⭐</span>
+                        <span class="tag-item bg-pink-100 text-pink-600">珍珠奶茶 🧋</span>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-3xl shadow-lg border-t-8 border-gray-400">
+                    <div class="text-center mb-4">
+                        <div class="w-12 h-12 md:w-16 md:h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto text-gray-500 text-xl md:text-2xl mb-2"><i class="fas fa-times-circle"></i></div>
+                        <h3 class="text-lg md:text-xl font-bold text-gray-800">😖 妳的地雷食物</h3>
+                    </div>
+                    <div class="text-center flex flex-wrap justify-center gap-1">
+                        <span class="tag-item bg-gray-100 text-gray-600 line-through decoration-red-500">海鮮 🦐</span>
+                        <span class="tag-item bg-gray-100 text-gray-600 line-through decoration-red-500">香菜 🌿</span>
+                        <span class="tag-item bg-gray-100 text-gray-600 line-through decoration-red-500">蔥</span>
+                        <span class="tag-item bg-gray-100 text-gray-600 line-through decoration-red-500">蒜 🧄</span>
+                        <span class="tag-item bg-gray-100 text-gray-600 line-through decoration-red-500">洋蔥 🧅</span>
+                        <span class="tag-item bg-gray-100 text-gray-600 line-through decoration-red-500">奶油 🧈</span>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-3xl shadow-lg border-t-8 border-yellow-400">
+                    <div class="text-center mb-4">
+                        <div class="w-12 h-12 md:w-16 md:h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto text-yellow-500 text-xl md:text-2xl mb-2"><i class="fas fa-heart"></i></div>
+                        <h3 class="text-lg md:text-xl font-bold text-gray-800">💖 妳喜歡的東西</h3>
+                    </div>
+                    <div class="text-center flex flex-wrap justify-center gap-1">
+                        <span class="tag-item bg-yellow-100 text-yellow-700">美樂蒂 🐰</span>
+                        <span class="tag-item bg-yellow-100 text-yellow-700">蠟筆小新🖍️</span>
+                        <span class="tag-item bg-yellow-100 text-yellow-700">倉鼠 🐹</span>
+                        <span class="tag-item bg-yellow-100 text-yellow-700">花知曉化妝品 💄</span>
+                        <span class="tag-item bg-yellow-100 text-yellow-700">透明鋼琴🎹</span>
+                        <span class="tag-item bg-yellow-100 text-yellow-700">電影:明天你是否依然愛我 🎬</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 留言板 & Interaction & Footer -->
+    <section id="message-board" class="py-12 bg-white">
+        <div class="max-w-3xl mx-auto px-4">
+            <div class="text-center mb-8">
+                <h2 class="text-2xl md:text-3xl font-bold text-pink-600 mb-2"><i class="fas fa-envelope-open-text mr-2"></i>甜蜜留言板</h2>
+                <p class="text-gray-500 text-sm">寫下想對作者說的話</p>
+            </div>
+            <div class="bg-pink-50 p-4 md:p-6 rounded-2xl shadow-lg border border-pink-100 mb-8">
+                <div class="flex flex-col gap-3 md:gap-4">
+                    <input type="text" id="msgName" placeholder="妳的名字 / 暱稱" class="w-full px-4 py-2 rounded-lg border border-pink-200 focus:border-pink-500 focus:outline-none text-gray-800 bg-white">
+                    <textarea id="msgContent" rows="3" placeholder="寫點什麼吧..." class="w-full px-4 py-2 rounded-lg border border-pink-200 focus:border-pink-500 focus:outline-none text-gray-800 bg-white"></textarea>
+                    <button onclick="addMessage()" class="bg-pink-400 hover:bg-pink-500 text-white font-bold py-2 px-6 rounded-full transition self-end text-sm md:text-base"><i class="fas fa-paper-plane mr-1"></i> 送出留言</button>
+                </div>
+            </div>
+            <div id="messageList" class="space-y-4"></div>
+        </div>
+    </section>
+    <section id="interaction" class="py-16 text-center bg-white">
+        <h2 class="text-xl md:text-2xl font-bold text-pink-600 mb-6">喜歡這個網頁就點點我</h2>
+        <button id="loveBtn" class="relative overflow-hidden bg-gradient-to-r from-pink-400 to-red-400 text-white font-bold py-3 px-8 md:py-4 md:px-10 rounded-full shadow-lg transform transition duration-200 hover:scale-110 active:scale-95"><span class="relative z-10 text-base md:text-lg"><i class="fas fa-heart mr-2"></i>發送愛心</span></button>
+        <p class="mt-6 text-pink-400 font-bold text-base md:text-lg">目前已累積 <span id="heartCountDisplay" class="text-xl md:text-2xl text-red-500 mx-1">0</span> 顆愛心</p>
+    </section>
+    <footer class="bg-white py-6 text-center border-t border-pink-100"><p class="text-pink-400 font-handwriting text-xl md:text-2xl mb-1">Forever & Always</p></footer>
+
+    <!-- Lightbox -->
+    <div id="lightbox" onclick="closeLightbox(event)">
+        <span class="absolute top-4 right-4 md:top-5 md:right-8 text-white text-3xl md:text-4xl cursor-pointer hover:text-pink-400 z-[3000]" onclick="closeLightbox(event, true)">&times;</span>
+        <div class="lb-nav lb-prev" onclick="changeLightboxSlide(-1, event)"><i class="fas fa-chevron-left"></i></div>
+        <img id="lightbox-img" onclick="event.stopPropagation()">
+        <div class="lb-nav lb-next" onclick="changeLightboxSlide(1, event)"><i class="fas fa-chevron-right"></i></div>
+        <div id="lb-counter">1 / 1</div>
+    </div>
+
+    <script>
+        // =================================================================
+        // [設定區] 照片資料庫 - 請在這裡填寫您的照片資料
+        // category 選項: 
+        // 'im' (重要), 'bh' (大心心), 'sm' (小心心), 'ot' (其他), 'mb' (銘哥)
+        // =================================================================
+        const photoDatabase = [
+            { date: '2024.04.01', category: 'im', img: "im/Screenshot_20240401_233655_Free Fire.jpg", title:"Free Fire" },
+            { date: '2024.04.14', category: 'im', img: "im/Screenshot_20240414_152624_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.04.14', category: 'im', img: "im/Screenshot_20240414_152721_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.04.15', category: 'im', img: "im/Screenshot_20240415_191704_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.04.22', category: 'im', img: "im/Screenshot_20240422_215957_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.05.03', category: 'im', img: "im/Screenshot_20240503_225912_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.05.05', category: 'im', img: "im/Screenshot_20240505_211421_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.05.06', category: 'im', img: "im/Screenshot_20240506_202630_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.05.08', category: 'im', img: "im/Screenshot_20240508_205148_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.05.11', category: 'im', img: "im/Screenshot_20240511_221311_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.05.11', category: 'im', img: "im/Screenshot_20240511_222654_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.05.11', category: 'im', img: "im/Screenshot_20240511_223338_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.05.11', category: 'im', img: "im/Screenshot_20240511_225301_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.05.11', category: 'im', img: "im/Screenshot_20240511_225642_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.05.11', category: 'im', img: "im/Screenshot_20240511_233217_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.06.25', category: 'im', img: "im/Screenshot_20240625_215029_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.07.01', category: 'im', img: "im/Screenshot_20240701_170105_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.07.10', category: 'im', img: "im/Screenshot_20240710_093331_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.07.10', category: 'im', img: "im/Screenshot_20240710_202644_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.07.14', category: 'im', img: "im/Screenshot_20240714_110110_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.07.17', category: 'im', img: "im/Screenshot_20240717_160026_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.12.24', category: 'im', img: "im/Screenshot_20241224_223922_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.12.24', category: 'im', img: "im/Screenshot_20241224_223947_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.12.24', category: 'im', img: "im/Screenshot_20241224_225056_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.12.30', category: 'im', img: "im/Screenshot_20241230_205619_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.12.30', category: 'im', img: "im/Screenshot_20241230_213137_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.12.31', category: 'im', img: "im/Screenshot_20241231_233749_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.12.31', category: 'im', img: "im/Screenshot_20241231_233752_Free Fire.jpg", title:"Free Fire"},
+            { date: '2025.01.16', category: 'im', img: "im/Screenshot_20250116_203958_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.04.13', category: 'bh', img: "bh/20240413_193710_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.04.17', category: 'bh', img: "bh/Screenshot_20240417_192822_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.04.17', category: 'bh', img: "bh/Screenshot_20240417_211632_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.04.18', category: 'bh', img: "bh/Screenshot_20240418_221412_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.04.19', category: 'bh', img: "bh/Screenshot_20240419_220917_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.04.19', category: 'bh', img: "bh/Screenshot_20240419_224031_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.04.20', category: 'bh', img: "bh/Screenshot_20240420_200507_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.04.21', category: 'bh', img: "bh/Screenshot_20240421_122857_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.04.23', category: 'bh', img: "bh/Screenshot_20240423_210631_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.04.26', category: 'bh', img: "bh/Screenshot_20240426_191618_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.05.01', category: 'bh', img: "bh/Screenshot_20240501_201851_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.05.03', category: 'bh', img: "bh/Screenshot_20240503_225521_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.05.04', category: 'bh', img: "bh/Screenshot_20240504_225352_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.05.05', category: 'bh', img: "bh/Screenshot_20240505_084732_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.05.05', category: 'bh', img: "bh/Screenshot_20240505_105003_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.05.05', category: 'bh', img: "bh/Screenshot_20240505_110524_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.05.05', category: 'bh', img: "bh/Screenshot_20240505_161336_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.05.05', category: 'bh', img: "bh/Screenshot_20240505_210703_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.05.07', category: 'bh', img: "bh/Screenshot_20240507_212920_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.05.09', category: 'bh', img: "bh/Screenshot_20240509_204357_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.05.11', category: 'bh', img: "bh/Screenshot_20240511_221106_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.05.11', category: 'bh', img: "bh/Screenshot_20240511_222024_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.05.11', category: 'bh', img: "bh/Screenshot_20240511_223947_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.05.11', category: 'bh', img: "bh/Screenshot_20240511_225836_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.05.11', category: 'bh', img: "bh/Screenshot_20240511_233234_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.05.12', category: 'bh', img: "bh/Screenshot_20240512_182732_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.05.13', category: 'bh', img: "bh/Screenshot_20240513_224500_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.05.14', category: 'bh', img: "bh/Screenshot_20240514_222013_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.05.15', category: 'bh', img: "bh/Screenshot_20240515_203419_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.05.15', category: 'bh', img: "bh/Screenshot_20240515_220343_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.05.16', category: 'bh', img: "bh/Screenshot_20240516_195926_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.05.16', category: 'bh', img: "bh/Screenshot_20240516_220310_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.05.16', category: 'bh', img: "bh/Screenshot_20240516_222854_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.05.17', category: 'bh', img: "bh/Screenshot_20240517_215437_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.05.18', category: 'bh', img: "bh/Screenshot_20240518_205212_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.05.18', category: 'bh', img: "bh/Screenshot_20240518_210458_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.05.18', category: 'bh', img: "bh/Screenshot_20240518_210632_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.05.18', category: 'bh', img: "bh/Screenshot_20240518_220239_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.05.19', category: 'bh', img: "bh/Screenshot_20240519_122442_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.05.19', category: 'bh', img: "bh/Screenshot_20240519_151229_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.05.21', category: 'bh', img: "bh/Screenshot_20240521_225900_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.05.22', category: 'bh', img: "bh/Screenshot_20240522_200017_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.05.23', category: 'bh', img: "bh/Screenshot_20240523_222235_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.05.24', category: 'bh', img: "bh/Screenshot_20240524_211321_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.05.24', category: 'bh', img: "bh/Screenshot_20240524_212443_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.05.25', category: 'bh', img: "bh/Screenshot_20240525_220303_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.05.26', category: 'bh', img: "bh/Screenshot_20240526_221836_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.05.27', category: 'bh', img: "bh/Screenshot_20240527_220116_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.05.27', category: 'bh', img: "bh/Screenshot_20240527_222301_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.05.31', category: 'bh', img: "bh/Screenshot_20240531_203634_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.06.05', category: 'bh', img: "bh/Screenshot_20240605_002609_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.06.09', category: 'bh', img: "bh/Screenshot_20240609_212127_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.06.14', category: 'bh', img: "bh/Screenshot_20240614_225853_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.06.16', category: 'bh', img: "bh/Screenshot_20240616_154104_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.06.19', category: 'bh', img: "bh/Screenshot_20240619_203039_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.06.19', category: 'bh', img: "bh/Screenshot_20240619_212735_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.06.20', category: 'bh', img: "bh/Screenshot_20240620_213519_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.06.25', category: 'bh', img: "bh/Screenshot_20240625_214314_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.06.25', category: 'bh', img: "bh/Screenshot_20240625_221736_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.06.28', category: 'bh', img: "bh/Screenshot_20240628_173033_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.07.02', category: 'bh', img: "bh/Screenshot_20240702_174825_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.07.06', category: 'bh', img: "bh/Screenshot_20240706_232124_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.07.09', category: 'bh', img: "bh/Screenshot_20240709_205107_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.07.09', category: 'bh', img: "bh/Screenshot_20240709_222555_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.07.11', category: 'bh', img: "bh/Screenshot_20240711_203057_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.07.13', category: 'bh', img: "bh/Screenshot_20240713_162357_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.07.14', category: 'bh', img: "bh/Screenshot_20240714_212806_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.07.15', category: 'bh', img: "bh/Screenshot_20240715_191157_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.07.17', category: 'bh', img: "bh/Screenshot_20240717_161742_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.08.02', category: 'bh', img: "bh/Screenshot_20240802_230815_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.08.03', category: 'bh', img: "bh/Screenshot_20240803_213000_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.08.04', category: 'bh', img: "bh/Screenshot_20240804_220943_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.08.05', category: 'bh', img: "bh/Screenshot_20240805_221144_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.08.06', category: 'bh', img: "bh/Screenshot_20240806_215342_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.08.06', category: 'bh', img: "bh/Screenshot_20240806_222337_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.08.08', category: 'bh', img: "bh/Screenshot_20240808_222353_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.08.11', category: 'bh', img: "bh/Screenshot_20240811_163914_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.08.12', category: 'bh', img: "bh/Screenshot_20240812_222052_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.08.12', category: 'bh', img: "bh/Screenshot_20240812_222125_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.08.16', category: 'bh', img: "bh/Screenshot_20240816_222758_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.08.17', category: 'bh', img: "bh/Screenshot_20240817_222438_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.08.17', category: 'bh', img: "bh/Screenshot_20240817_224543_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.12.14', category: 'bh', img: "bh/Screenshot_20241214_170102_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.12.16', category: 'bh', img: "bh/Screenshot_20241216_202748_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.12.31', category: 'bh', img: "bh/Screenshot_20241231_233334_Free Fire.jpg", title:"Free Fire"},
+            { date: '2025.01.01', category: 'bh', img: "bh/Screenshot_20250101_013509_Free Fire.jpg", title:"Free Fire"},
+            { date: '2025.01.12', category: 'bh', img: "bh/Screenshot_20250112_152936_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.04.04', category: 'mb', img: "mb/Screenshot_20240404_222214_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.05.05', category: 'mb', img: "mb/Screenshot_20240405_115103_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.05.11', category: 'mb', img: "mb/Screenshot_20240505_174259_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.05.11', category: 'mb', img: "mb/Screenshot_20240511_225843_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.05.16', category: 'mb', img: "mb/Screenshot_20240511_225906_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.05.16', category: 'mb', img: "mb/Screenshot_20240516_210333_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.05.16', category: 'mb', img: "mb/Screenshot_20240516_210846_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.05.16', category: 'mb', img: "mb/Screenshot_20240516_210851_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.05.19', category: 'mb', img: "mb/Screenshot_20240519_123901_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.05.19', category: 'mb', img: "mb/Screenshot_20240519_192551_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.06.02', category: 'mb', img: "mb/Screenshot_20240602_132454_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.06.02', category: 'mb', img: "mb/Screenshot_20240602_134212_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.06.14', category: 'mb', img: "mb/Screenshot_20240614_224255_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.06.14', category: 'mb', img: "mb/Screenshot_20240614_225903_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.06.16', category: 'mb', img: "mb/Screenshot_20240616_150645_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.06.16', category: 'mb', img: "mb/Screenshot_20240616_151109_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.06.28', category: 'mb', img: "mb/Screenshot_20240628_165707_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.06.28', category: 'mb', img: "mb/Screenshot_20240628_172311_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.06.28', category: 'mb', img: "mb/Screenshot_20240628_230026_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.07.01', category: 'mb', img: "mb/Screenshot_20240701_213843_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.07.07', category: 'mb', img: "mb/Screenshot_20240707_174634_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.07.14', category: 'mb', img: "mb/Screenshot_20240714_113655_Free Fire.jpg", title:"Free Fire"},
+            { date: '2025.01.16', category: 'mb', img: "mb/Screenshot_20250116_205603_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.03.17', category: 'ot', img: "ot/Screenshot_20240317_203624_Free Fire.jpg 的副本.jpg", title:"Free Fire"}, 
+            { date: '2024.03.18', category: 'ot', img: "ot/Screenshot_20240318_201512_Free Fire.jpg 的副本.jpg", title:"Free Fire"}, 
+            { date: '2024.03.21', category: 'ot', img: "ot/Screenshot_20240321_202847_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.03.22', category: 'ot', img: "ot/Screenshot_20240322_234348_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.03.28', category: 'ot', img: "ot/Screenshot_20240328_202727_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.03.28', category: 'ot', img: "ot/Screenshot_20240328_202734_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.03.30', category: 'ot', img: "ot/Screenshot_20240330_174042_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.03.30', category: 'ot', img: "ot/Screenshot_20240330_175156_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.03.31', category: 'ot', img: "ot/Screenshot_20240331_213328_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.05.11', category: 'ot', img: "ot/Screenshot_20240511_225248_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.07.29', category: 'ot', img: "ot/Screenshot_20240729_202629_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.10.21', category: 'ot', img: "ot/Screenshot_20241021_205346_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.12.14', category: 'ot', img: "ot/Screenshot_20241214_165204_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.12.14', category: 'ot', img: "ot/Screenshot_20241214_165224_Free Fire.jpg", title:"Free Fire"}, 
+            { date: '2025.01.01', category: 'sm', img: "sm/Screenshot_20250101_013517_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.08.03', category: 'sm', img: "sm/Screenshot_20240803_225658_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.07.19', category: 'sm', img: "sm/Screenshot_20240719_094903_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.06.20', category: 'sm', img: "sm/Screenshot_20240620_220456_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.05.20', category: 'sm', img: "sm/Screenshot_20240520_221300_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.05.20', category: 'sm', img: "sm/Screenshot_20240520_220121_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.05.18', category: 'sm', img: "sm/Screenshot_20240518_225352_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.05.15', category: 'sm', img: "sm/Screenshot_20240515_203450_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.05.14', category: 'sm', img: "sm/Screenshot_20240514_225056_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.05.12', category: 'sm', img: "sm/Screenshot_20240512_182758_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.05.11', category: 'sm', img: "sm/Screenshot_20240511_231724_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.05.08', category: 'sm', img: "sm/Screenshot_20240508_211833_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.05.05', category: 'sm', img: "sm/Screenshot_20240505_220610_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.05.02', category: 'sm', img: "sm/Screenshot_20240502_221638_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.04.25', category: 'sm', img: "sm/Screenshot_20240425_211129_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.04.25', category: 'sm', img: "sm/Screenshot_20240425_205625_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.04.24', category: 'sm', img: "sm/Screenshot_20240424_194652_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.04.21', category: 'sm', img: "sm/Screenshot_20240421_205413_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.04.21', category: 'sm', img: "sm/Screenshot_20240421_131347_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.04.21', category: 'sm', img: "sm/Screenshot_20240421_131347_Free Fire copy.jpg", title:"Free Fire"},
+            { date: '2024.04.17', category: 'sm', img: "sm/Screenshot_20240417_203750_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.04.17', category: 'sm', img: "sm/Screenshot_20240417_193130_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.04.15', category: 'sm', img: "sm/Screenshot_20240415_222957_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.04.15', category: 'sm', img: "sm/Screenshot_20240415_222947_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.04.14', category: 'sm', img: "sm/Screenshot_20240414_223516_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.04.12', category: 'sm', img: "sm/Screenshot_20240412_211852_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.04.10', category: 'sm', img: "sm/Screenshot_20240410_221549_Free Fire.jpg", title:"Free Fire"},
+            { date: '2024.04.05', category: 'sm', img: "sm/Screenshot_20240405_122332_Free Fire.jpg", title:"Free Fire"},
+
+
+
+            
+           ,
+        ];
+        // =================================================================
+
+        // 自動整理並渲染照片
+        function renderGameGallery() {
+            const grid = document.getElementById('game-grid');
+            grid.innerHTML = ''; // 清空
+
+            // 1. 分組: 將相同 日期 + 類別 的照片視為同一組
+            const groups = {};
+            photoDatabase.forEach(photo => {
+                const key = photo.date + '_' + photo.category;
+                if (!groups[key]) {
+                    groups[key] = {
+                        date: photo.date,
+                        category: photo.category,
+                        title: photo.title,
+                        photos: []
+                    };
+                }
+                groups[key].photos.push(photo.img);
+            });
+
+            // 2. 排序: 將分組後的資料轉為陣列並依照日期排序 (新 -> 舊)
+            const sortedGroups = Object.values(groups).sort((a, b) => {
+                return new Date(b.date.replace(/\./g, '-')) - new Date(a.date.replace(/\./g, '-'));
+            });
+
+            // 3. 生成 HTML
+            const categoryColors = {
+                'im': 'bg-blue-400',
+                'bh': 'bg-red-400',
+                'sm': 'bg-purple-400',
+                'ot': 'bg-green-400',
+                'mb': 'bg-indigo-500'
+            };
+            const categoryNames = {
+                'im': '重要❗',
+                'bh': '大心心❤️',
+                'sm': '小心心🫶',
+                'ot': '其他',
+                'mb': '銘哥 🎮'
+            };
+
+            sortedGroups.forEach(group => {
+                const badgeColor = categoryColors[group.category] || 'bg-gray-400';
+                const badgeName = categoryNames[group.category] || '其他';
+                const coverImg = group.photos[0];
+                const countBadge = group.photos.length > 1 
+                    ? `<div class="photo-count-badge"><i class="fas fa-images"></i> ${group.photos.length}</div>` 
+                    : '';
+                
+                let hiddenPhotosHTML = '';
+                if (group.photos.length > 1) {
+                    hiddenPhotosHTML = '<div class="hidden-photos" style="display:none;">';
+                    for (let i = 1; i < group.photos.length; i++) {
+                        hiddenPhotosHTML += `<img src="${group.photos[i]}">`;
+                    }
+                    hiddenPhotosHTML += '</div>';
+                }
+
+                // [修改] 在這裡加入 class="game-item {category}" 讓過濾器能抓到
+                const cardHTML = `
+                    <div class="game-item ${group.category} bg-white p-3 rounded-2xl shadow-md transition duration-300" onclick="openGallery(this)">
+                        <div class="game-photo-container rounded-xl h-40 md:h-48 overflow-hidden cursor-pointer">
+                            <img src="${coverImg}" class="cover-img">
+                            ${hiddenPhotosHTML}
+                            ${countBadge}
+                        </div>
+                        <div class="mt-3 px-1">
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="text-[10px] md:text-xs font-bold text-white ${badgeColor} px-2 py-0.5 rounded-full">${badgeName}</span>
+                                <span class="text-[10px] md:text-xs text-gray-400">${group.date}</span>
+                            </div>
+                            <h4 class="text-pink-600 font-bold text-sm md:text-base">${group.title}</h4>
+                        </div>
+                    </div>
+                `;
+                grid.innerHTML += cardHTML;
+            });
+        }
+
+        renderGameGallery();
+
+        // --- 以下為其他功能程式碼 ---
+
+        function toggleMobileMenu() {
+            const menu = document.getElementById('mobile-menu');
+            menu.classList.toggle('open');
+        }
+        document.getElementById('mobile-menu-btn').addEventListener('click', toggleMobileMenu);
+
+        (function(){
+            const _0x4a2b = "MDQyMQ=="; 
+            const _in = document.getElementById('_input_p');
+            const _bt = document.getElementById('_btn_enter'); const _md = document.getElementById('passwordModal');
+            const _er = document.getElementById('_msg_err');
+            function _0xCheck() {
+                if (btoa(_in.value) === _0x4a2b) {
+                    _md.style.opacity = '0'; setTimeout(()=>{_md.style.display='none';document.body.style.overflow='auto';},500);
+                } else {
+                    _er.classList.remove('hidden'); _in.classList.add('shake','border-red-400'); _in.value=''; setTimeout(()=>{_in.classList.remove('shake');},500);
+                }
+            }
+            _bt.addEventListener('click', _0xCheck); _in.addEventListener('keypress', (e)=>{if(e.key==='Enter')_0xCheck();});
+        })();
+
+        const startDate = new Date(2024, 3, 21);
+        const endDate = new Date(2025, 0, 19);
+        function calculateFixedDuration() {
+            const diff = endDate - startDate;
+            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            document.getElementById("days").innerText = days;
+            document.getElementById("hours").innerText = hours;
+            document.getElementById("minutes").innerText = minutes;
+        }
+        calculateFixedDuration();
+
+        const playlist = [
+            { file: 'audio/song1.mp3', name: '懺悔錄' }, 
+            { file: 'audio/song2.mp3', name: '浴室Rnb beat - Zy ' },
+            { file: 'audio/song3.mp3', name: '予你' },
+            { file: 'audio/song4.mp3', name: '虛擬' },
+            { file: 'audio/song5.mp3', name: '第57次取消發送' }
+        ];
+
+        let currentTrackIndex = 0;
+        const audioPlayer = document.getElementById('bgMusic');
+        const musicBtn = document.getElementById('musicToggleBtn');
+        const nextBtn = document.getElementById('nextTrackBtn');
+        const recordIcon = document.getElementById('recordIcon');
+        const musicTitle = document.getElementById('musicTitle');
+        const musicStatus = document.getElementById('musicStatus');
+
+        function loadTrack(index) {
+            if (playlist.length > 0) {
+                audioPlayer.src = playlist[index].file;
+                musicTitle.innerText = playlist[index].name;
+                audioPlayer.load();
+            }
+        }
+        loadTrack(currentTrackIndex);
+
+        function togglePlay() {
+            if (audioPlayer.paused) {
+                audioPlayer.play().then(() => { updateUI(true); }).catch(error => { console.log("Playback failed:", error); musicStatus.innerText = "無法播放 (點擊換下一首)"; recordIcon.classList.remove('record-spin'); });
+            } else {
+                audioPlayer.pause(); updateUI(false);
+            }
+        }
+        function playNext() {
+            currentTrackIndex = (currentTrackIndex + 1) % playlist.length;
+            loadTrack(currentTrackIndex);
+            audioPlayer.play().then(() => { updateUI(true); }).catch(error => { console.log("Next track failed:", error); musicStatus.innerText = "無法播放 (點擊換下一首)"; recordIcon.classList.remove('record-spin'); });
+        }
+        function updateUI(isPlaying) {
+            if (isPlaying) { recordIcon.classList.add('record-spin'); musicStatus.innerText = "Playing..."; } 
+            else { recordIcon.classList.remove('record-spin'); musicStatus.innerText = "Click to Play"; }
+        }
+        musicBtn.addEventListener('click', function() { if (musicStatus.innerText.includes("無法播放")) { playNext(); } else { togglePlay(); } });
+        nextBtn.addEventListener('click', playNext);
+        audioPlayer.addEventListener('ended', playNext);
+        audioPlayer.addEventListener('error', function(e) { console.log("Audio Error", e); musicStatus.innerText = "無法播放 (點擊換下一首)"; recordIcon.classList.remove('record-spin'); });
+
+        let slideIndex = 1; let slideTimer;
+        showSlides(slideIndex); startSlideTimer();
+        function plusSlides(n) { showSlides(slideIndex += n); resetSlideTimer(); }
+        function showSlides(n) {
+            let i; let slides = document.getElementsByClassName("mySlides");
+            if (n > slides.length) {slideIndex = 1} if (n < 1) {slideIndex = slides.length}
+            for (i = 0; i < slides.length; i++) { slides[i].style.display = "none"; }
+            slides[slideIndex-1].style.display = "block";
+        }
+        function startSlideTimer() { slideTimer = setInterval(function() { plusSlides(1); }, 5000); }
+        function resetSlideTimer() { clearInterval(slideTimer); startSlideTimer(); }
+
+        function searchGamesByDate() {
+            const input = document.getElementById('gameDateSearch');
+            const dateVal = input.value; 
+            if (!dateVal) { alert("請選擇一個日期喔！"); return; }
+            const searchDate = dateVal.replace(/-/g, '.');
+            const items = document.getElementsByClassName('game-item');
+            let found = false;
+            const btns = document.getElementsByClassName('filter-btn');
+            for(let btn of btns) btn.classList.remove('active');
+            for (let i = 0; i < items.length; i++) {
+                if (items[i].innerText.includes(searchDate)) { items[i].style.display = "block"; found = true; } 
+                else { items[i].style.display = "none"; }
+            }
+            if (!found) { alert("這一天好像沒有記錄喔～試試別天吧！"); }
+        }
+
+        // [修改] 遊戲過濾邏輯：增加 'all' (全部) 和 'mb' (銘哥) 的區別
+        function filterGames(category) {
+            document.getElementById('gameDateSearch').value = '';
+            const items = document.getElementsByClassName('game-item');
+            const btns = document.getElementsByClassName('filter-btn');
+            
+            // 定義按鈕關鍵字對應
+            // 這裡我們比較的是按鈕上的文字，所以要對應到 HTML 裡的按鈕文字
+            const categoryMap = { 
+                'all': '全部', // 新增: 顯示所有
+                'mb': '銘哥',  // 修改: 只顯示 mb 類別
+                'im': '重要', 
+                'bh': '大心心', 
+                'sm': '小心心',
+                'ot': '其他'
+            };
+
+            // 1. 設定按鈕樣式
+            for(let btn of btns) {
+                if(btn.innerText.includes(categoryMap[category])) { 
+                    btn.classList.add('active'); 
+                } else { 
+                    btn.classList.remove('active'); 
+                }
+            }
+            
+            // 2. 篩選照片
+            for (let i = 0; i < items.length; i++) {
+                if (category === 'all') {
+                    // 如果選全部，顯示所有照片
+                    items[i].style.display = "block";
+                } else {
+                    // 其他情況，只顯示包含該類別 class 的照片
+                    if (items[i].classList.contains(category)) { 
+                        items[i].style.display = "block"; 
+                    } else { 
+                        items[i].style.display = "none"; 
+                    }
+                }
+            }
+        }
+        
+        let currentGalleryImages = []; let currentGalleryIndex = 0;   
+        function showSinglePhoto(src) {
+            currentGalleryImages = [src]; currentGalleryIndex = 0;
+            updateLightboxView();
+            document.getElementById('lightbox').style.display = "flex";
+            document.body.style.overflow = 'hidden';
+        }
+        function openGallery(cardElement) {
+            const coverImg = cardElement.querySelector('.cover-img').src;
+            const hiddenContainer = cardElement.querySelector('.hidden-photos');
+            const hiddenImgs = hiddenContainer ? Array.from(hiddenContainer.querySelectorAll('img')).map(img => img.src) : [];
+            currentGalleryImages = [coverImg, ...hiddenImgs];
+            currentGalleryIndex = 0; 
+            updateLightboxView();
+            document.getElementById('lightbox').style.display = "flex";
+            document.body.style.overflow = 'hidden';
+        }
+        function changeLightboxSlide(n, event) {
+            if(event) event.stopPropagation();
+            currentGalleryIndex += n;
+            if (currentGalleryIndex >= currentGalleryImages.length) currentGalleryIndex = 0;
+            if (currentGalleryIndex < 0) currentGalleryIndex = currentGalleryImages.length - 1;
+            updateLightboxView();
+        }
+        function updateLightboxView() {
+            const img = document.getElementById('lightbox-img');
+            const counter = document.getElementById('lb-counter');
+            const prevBtn = document.querySelector('.lb-prev');
+            const nextBtn = document.querySelector('.lb-next');
+            img.style.opacity = 0;
+            setTimeout(() => { img.src = currentGalleryImages[currentGalleryIndex]; img.style.opacity = 1; }, 100);
+            counter.innerText = `${currentGalleryIndex + 1} / ${currentGalleryImages.length}`;
+            if (currentGalleryImages.length <= 1) { prevBtn.style.display = 'none'; nextBtn.style.display = 'none'; counter.style.display = 'none'; } 
+            else { prevBtn.style.display = 'flex'; nextBtn.style.display = 'flex'; counter.style.display = 'block'; }
+        }
+        function closeLightbox(event, force) {
+            if (force || event.target.id === 'lightbox') {
+                document.getElementById('lightbox').style.display = "none";
+                document.body.style.overflow = 'auto';
+            }
+        }
+
+        function loadMessages() {
+            const list = document.getElementById('messageList');
+            const msgs = JSON.parse(localStorage.getItem('love_messages') || '[]');
+            list.innerHTML = '';
+            if(msgs.length === 0) { list.innerHTML = '<div class="text-center text-gray-400 py-4">還沒有留言喔！</div>'; return; }
+            msgs.reverse().forEach(msg => {
+                const div = document.createElement('div');
+                div.className = 'message-card bg-white p-4 rounded-xl shadow-sm border-l-4 border-pink-400 flex justify-between items-start';
+                div.innerHTML = `<div><div class="font-bold text-pink-600 text-sm mb-1">${msg.name} <span class="text-gray-300 font-normal text-xs ml-2">${msg.date}</span></div><div class="text-gray-600">${msg.content}</div></div><i class="fas fa-heart text-pink-200"></i>`;
+                list.appendChild(div);
+            });
+        }
+        window.addMessage = function() {
+            const n = document.getElementById('msgName'), c = document.getElementById('msgContent');
+            if(!n.value || !c.value) { alert("請輸入名字和內容喔！"); return; }
+            const msgs = JSON.parse(localStorage.getItem('love_messages') || '[]');
+            msgs.push({ name: n.value, content: c.value, date: new Date().toLocaleString() });
+            localStorage.setItem('love_messages', JSON.stringify(msgs));
+            n.value = ''; c.value = ''; loadMessages();
+        }
+        loadMessages();
+
+        let heartCount = parseInt(localStorage.getItem('heart_count') || '0');
+        const heartDisplay = document.getElementById('heartCountDisplay');
+        if(heartDisplay) heartDisplay.innerText = heartCount;
+        document.getElementById('loveBtn').addEventListener('click',()=>{
+            heartCount++;
+            if(heartDisplay) heartDisplay.innerText = heartCount;
+            localStorage.setItem('heart_count', heartCount);
+            for(let i=0;i<5;i++){
+                const h=document.createElement('div');h.className='floating-heart';
+                h.innerHTML='<i class="fas fa-heart"></i>';
+                h.style.left=Math.random()*window.innerWidth+'px';
+                h.style.bottom='0';h.style.fontSize=(Math.random()*20+10)+'px';
+                h.style.animationDuration=(Math.random()*2+3)+'s';
+                h.style.color=['#ff7675','#e84393','#fd79a8'][Math.floor(Math.random()*3)];
+                document.body.appendChild(h);setTimeout(()=>h.remove(),5000);
+            }
+        });
+    </script>
+</body>
+</html>
